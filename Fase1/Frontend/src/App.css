@@ -1,0 +1,36 @@
+* {
+  margin: 0; 
+}
+
+#root {
+  text-align: center;
+  
+}
+
+.title{
+  font-size: 1.2rem;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  background-color: #222;
+  color: #fff;
+  width: 100%;
+}
+
+.graficas {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: #f0f0f0;
+}
+
+.grafica {
+  flex: 1 1 300px;
+  max-width: 400px;
+  min-width: 300px;
+  background-color: #fff;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+}
