@@ -1,24 +1,31 @@
-# Logs
-logs
+# Directorios de dependencias
+node_modules/
+
+# Archivos de compilación y salida
+dist/
+build/
+
+# Archivos de configuración de entorno
+.env
+.env.local
+.env.*.local
+
+# Cachés y logs
+.vscode/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Archivos del editor de texto
+.idea/
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+*.swp
+*.swo
+
+# Configuración local de ESLint y Prettier
+.eslintcache
+.prettiercache
+
+# Archivos de sistemas operativos
+Thumbs.db
