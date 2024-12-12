@@ -1,0 +1,79 @@
+.tiempo-rango-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.time-range-div {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #f4f4f4;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.time-date, .time-find {
+    margin: 0 10px;
+    display: flex;
+    flex-direction: column;
+}
+
+.time-date label {
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.time-date input {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.time-find button {
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.time-find button:hover {
+    background-color: #0056b3;
+}
+
+.charts-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.chart {
+    background-color: #f4f4f4;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.chart h3 {
+    text-align: center;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.error-message {
+    color: red;
+    text-align: center;
+    margin: 15px 0;
+    font-weight: bold;
+}
+
+@media (max-width: 768px) {
+    .charts-container {
+        grid-template-columns: 1fr;
+    }
+}

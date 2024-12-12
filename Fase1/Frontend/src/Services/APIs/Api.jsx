@@ -17,3 +17,16 @@ export const getData = async () => {
         throw error;
     }
 };
+
+export const getDataRange = async (startDate, endDate) => {
+    try {
+        const response = await api.post('/api/data-range', {
+            start_date: startDate,
+            end_date: endDate
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching data range:', error);
+        throw error;
+    }
+};
