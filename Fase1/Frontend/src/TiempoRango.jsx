@@ -17,7 +17,7 @@ export function TiempoRango() {
     const [error, setError] = useState('');
 
     const handleFindData = async () => {
-        // Reset previous state
+
         setError('');
         setDataRange({
             timestamps: [],
@@ -28,7 +28,7 @@ export function TiempoRango() {
             barometricPressure: []
         });
 
-        // Validate date inputs
+
         if (!startDate || !endDate) {
             setError('Por favor seleccione fechas de inicio y fin');
             return;
@@ -36,7 +36,6 @@ export function TiempoRango() {
 
         try {
             const data = await getDataRange(startDate, endDate);
-            // Process data for each metric
             const processedData = {
                 timestamps: data.map(item => new Date(item.timestamp).toLocaleString()),
                 temperature: data.map(item => item.temperature),

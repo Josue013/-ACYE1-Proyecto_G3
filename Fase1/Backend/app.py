@@ -55,22 +55,21 @@ def get_data_range():
         start_date = data.get("start_date")
         end_date = data.get("end_date")
         
-        # Validate date input
+
         if not start_date or not end_date:
-            return jsonify({"error": "Start and end dates are required."}), 400
+            return jsonify({"error": "Start y end son requeridos"}), 400
         
-        # Convert to datetime objects
+
         try:
             start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
             end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
         except ValueError:
-            return jsonify({"error": "Invalid date format. Use ISO format (YYYY-MM-DDTHH:MM)."}), 400
+            return jsonify({"error": "Formato invalido. Use el formato (YYYY-MM-DDTHH:MM)."}), 400
         
-        # Validate date range
+
         if start > end:
-            return jsonify({"error": "Start date must be before end date."}), 400
+            return jsonify({"error": "start debe ir antes que end"}), 400
         
-        # Query database for data within the date range
         cur = mysql.connection.cursor()
         cur.execute("""
             SELECT * FROM sensor_data 
@@ -79,16 +78,17 @@ def get_data_range():
         """, (start, end))
         rows = cur.fetchall()
         cur.close()
+        
         #imprimiendo la fecha de inicio y fin
         logging.info(f"Fecha de inicio: {start} y fecha de fin: {end}\n")
         #imprimir los datos
         logging.info(f"Datos obtenidos de la base de datos de rows: {rows}\n")
         
-        # Check if data exists
+
         if not rows:
             return jsonify({"message": "No existen datos en ese rango. Intente nuevamente."}), 404
         
-        # Format data
+ 
         data = []
         for row in rows:
             data.append({
