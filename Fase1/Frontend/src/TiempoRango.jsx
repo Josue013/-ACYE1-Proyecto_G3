@@ -77,68 +77,73 @@ export function TiempoRango() {
     });
 
     return (
-        <div className="tiempo-rango-container">
-            <div className="time-range-div">
-                <div className="time-date">
-                    <label>Fecha Inicial:</label>
-                    <input 
-                        type="datetime-local" 
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                    />
+        <>
+            <div className='title'>
+                <h1>Gráficas Históricas</h1>
+            </div>
+            <div className="tiempo-rango-container">
+                <div className="time-range-div">
+                    <div className="time-date">
+                        <label>Fecha Inicial:</label>
+                        <input 
+                            type="datetime-local" 
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                        />
+                    </div>
+                    <div className="time-date">
+                        <label>Fecha Final:</label>
+                        <input 
+                            type="datetime-local" 
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                        />
+                    </div>
+                    <div className="time-find">
+                        <button onClick={handleFindData}>Buscar Datos</button>
+                    </div>
                 </div>
-                <div className="time-date">
-                    <label>Fecha Final:</label>
-                    <input 
-                        type="datetime-local" 
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                    />
-                </div>
-                <div className="time-find">
-                    <button onClick={handleFindData}>Buscar Datos</button>
+
+                {error && <div className="error-message">{error}</div>}
+
+                <div className="charts-container">
+                    <div className="chart">
+                        <h3>Temperatura</h3>
+                        <Line 
+                            data={createChartData('Temperatura', dataRange.temperature, dataRange.timestamps)} 
+                            options={chartOptions} 
+                        />
+                    </div>
+                    <div className="chart">
+                        <h3>Humedad Relativa</h3>
+                        <Line 
+                            data={createChartData('Humedad Relativa', dataRange.humidityRelative, dataRange.timestamps)} 
+                            options={chartOptions} 
+                        />
+                    </div>
+                    <div className="chart">
+                        <h3>Humedad Absoluta</h3>
+                        <Line 
+                            data={createChartData('Humedad Absoluta', dataRange.humidityAbsolute, dataRange.timestamps)} 
+                            options={chartOptions} 
+                        />
+                    </div>
+                    <div className="chart">
+                        <h3>Velocidad del Viento</h3>
+                        <Line 
+                            data={createChartData('Velocidad del Viento', dataRange.windSpeed, dataRange.timestamps)} 
+                            options={chartOptions} 
+                        />
+                    </div>
+                    <div className="chart">
+                        <h3>Presión Barométrica</h3>
+                        <Line 
+                            data={createChartData('Presión Barométrica', dataRange.barometricPressure, dataRange.timestamps)} 
+                            options={chartOptions} 
+                        />
+                    </div>
                 </div>
             </div>
-
-            {error && <div className="error-message">{error}</div>}
-
-            <div className="charts-container">
-                <div className="chart">
-                    <h3>Temperatura</h3>
-                    <Line 
-                        data={createChartData('Temperatura', dataRange.temperature, dataRange.timestamps)} 
-                        options={chartOptions} 
-                    />
-                </div>
-                <div className="chart">
-                    <h3>Humedad Relativa</h3>
-                    <Line 
-                        data={createChartData('Humedad Relativa', dataRange.humidityRelative, dataRange.timestamps)} 
-                        options={chartOptions} 
-                    />
-                </div>
-                <div className="chart">
-                    <h3>Humedad Absoluta</h3>
-                    <Line 
-                        data={createChartData('Humedad Absoluta', dataRange.humidityAbsolute, dataRange.timestamps)} 
-                        options={chartOptions} 
-                    />
-                </div>
-                <div className="chart">
-                    <h3>Velocidad del Viento</h3>
-                    <Line 
-                        data={createChartData('Velocidad del Viento', dataRange.windSpeed, dataRange.timestamps)} 
-                        options={chartOptions} 
-                    />
-                </div>
-                <div className="chart">
-                    <h3>Presión Barométrica</h3>
-                    <Line 
-                        data={createChartData('Presión Barométrica', dataRange.barometricPressure, dataRange.timestamps)} 
-                        options={chartOptions} 
-                    />
-                </div>
-            </div>
-        </div>
+        </>
     );
 }

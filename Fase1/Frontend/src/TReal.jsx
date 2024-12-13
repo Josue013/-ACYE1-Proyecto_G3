@@ -65,7 +65,7 @@ export function TiempoReal() {
     return (
         <>
             <div className='title'>
-                <h1>Graficas en Tiempo Real</h1>
+                <h1>Gráficas en Tiempo Real</h1>
             </div>
             <div className="graficas">
                 <div className="grafica">
