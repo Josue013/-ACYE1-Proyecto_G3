@@ -4,7 +4,7 @@ import busio
 import adafruit_bmp280
 import time
 import mysql.connector
-import config
+
 
 # Configuracion del sensor DHT11
 SENSOR = adafruit_dht.DHT11(board.D24)
@@ -16,10 +16,10 @@ sensor_bmp280.sea_level_pressure = 1013.25 + (1.691 * 12)  # Ajuste basado en la
 
 # Configuracion de la base de datos MySQL
 conn = mysql.connector.connect(
-    host=config.MYSQL_HOST,
-    user=config.MYSQL_USER,
-    password=config.MYSQL_PASSWORD,
-    database=config.MYSQL_DB
+    host= '34.86.159.88',
+    user= 'root',
+    password= '0`zm%i^xZp82{%0j',
+    database= 'fase1'
 )
 cursor = conn.cursor()
 

@@ -1,7 +1,6 @@
 import RPi.GPIO as GPIO
 import time
 import mysql.connector
-import config
 
 TRIG = 6
 ECHO = 5
@@ -22,12 +21,17 @@ pulso_inicio = 0
 pulso_fin = 0
 distancia = 0
 
-# Configuracion de la base de datos MySQL
+# Configuracion directa de la base de datos MySQL
+MYSQL_HOST = '34.86.159.88'
+MYSQL_USER = 'root'
+MYSQL_PASSWORD = '0`zm%i^xZp82{%0j'
+MYSQL_DB = 'fase1'
+
 conn = mysql.connector.connect(
-    host=config.MYSQL_HOST,
-    user=config.MYSQL_USER,
-    password=config.MYSQL_PASSWORD,
-    database=config.MYSQL_DB
+    host=MYSQL_HOST,
+    user=MYSQL_USER,
+    password=MYSQL_PASSWORD,
+    database=MYSQL_DB
 )
 cursor = conn.cursor()
 
@@ -68,8 +72,6 @@ def main():
                 velocidad_lineal_cm_s = 2 * 3.1416 * RADIO_MOLINO * rps 
                 velocidad_lineal_m_s = velocidad_lineal_cm_s / 100 
 
-                print(f"Velocidad Lineal del Viento: {velocidad_lineal_m_s:.2f} m/s\n")
-
                 timestamp = time.strftime("%Y-%m-%d %H:%M:%S")  # Formato de fecha y hora
 
                 cursor.execute('''
@@ -81,7 +83,7 @@ def main():
                 contador_pasadas = 0
                 tiempo_inicio = tiempo_actual
 
-            time.sleep(0.01)  
+            time.sleep(10)  
 
     except KeyboardInterrupt:
         print("Programa interrumpido por el usuario.")
@@ -92,3 +94,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
