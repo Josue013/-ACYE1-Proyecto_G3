@@ -4,10 +4,9 @@
 
 #root {
   text-align: center;
-  
 }
 
-.title{
+.title {
   font-size: 1.2rem;
   padding-top: 1rem;
   padding-bottom: 1rem;
@@ -41,7 +40,9 @@
   padding: 1rem;
   display: flex;  
   justify-content: flex-start; 
+  align-items: center;
 }
+
 .navbar-button {
   background-color: #222;  
   color: white;  
@@ -57,26 +58,54 @@
 .navbar-button:hover {
   background-color: #45a049;  
 }
-.navbar ul {
-  list-style: none;
-  display: flex;
-  justify-content: space-around;
-  margin: 0;
-  padding: 0;
+
+.navbar-dropdown {
+  position: relative;
 }
 
-.navbar li {
-  margin: 0 10px;
-}
-
-.navbar a {
+.dropdown-toggle {
+  background-color: #222;
   color: white;
-  text-decoration: none;
-  font-size: 18px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
 }
 
-.navbar a:hover {
-  text-decoration: underline;
+.dropdown-toggle:hover {
+  background-color: #45a049;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  background-color: #fff;
+  min-width: 160px;
+  padding: 10px 0;
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
+
+.dropdown-item {
+  background-color: #fff;
+  color: #333;
+  padding: 10px 20px;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.dropdown-item:hover {
+  background-color: #f0f0f0;
+}
+
+.navbar-dropdown:hover .dropdown-menu {
+  display: block;
 }
 
 .gota {
