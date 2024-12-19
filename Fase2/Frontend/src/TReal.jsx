@@ -17,6 +17,7 @@ export function TiempoReal() {
     });
 
     const [initialLoad, setInitialLoad] = useState(true);
+    const [alertsReady, setAlertsReady] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -43,6 +44,7 @@ export function TiempoReal() {
                     waterTankLevel: [...prevData.waterTankLevel, latestData.waterTankLevel].slice(-10),
                 }));
                 setInitialLoad(false);
+                setAlertsReady(true); // Indicar que las alertas están listas para mostrarse
             } catch (error) {
                 console.error('Error fetching level data:', error);
             }
@@ -101,6 +103,50 @@ export function TiempoReal() {
             },
         },
     };
+
+    // Alertas 
+    useEffect(() => {
+        if (alertsReady && !initialLoad) {
+            if (humedadActual === 1) {
+                setTimeout(() => {
+                    alert("La tierra está húmeda. Sugerencia: cortar el flujo de agua.");
+                }, 500); 
+            }
+        }
+    }, [humedadActual, initialLoad, alertsReady]);
+
+    useEffect(() => {
+        if (alertsReady && !initialLoad) {
+            const temperaturaInterna = data.indoorTemperature.length > 0 ? data.indoorTemperature[data.indoorTemperature.length - 1] : 0;
+            if (temperaturaInterna > 25 && temperaturaInterna < 35) {
+                setTimeout(() => {
+                    alert("La temperatura interna ha subido más allá de la temperatura ideal (25°C). Temperatura actual: "+ temperaturaInterna);
+                }, 500); 
+            }
+        }
+    }, [data.indoorTemperature, initialLoad, alertsReady]);
+
+    useEffect(() => {
+        if (alertsReady && !initialLoad) {
+            const nivelTanque = data.waterTankLevel.length > 0 ? data.waterTankLevel[data.waterTankLevel.length - 1] : 100;
+            if (nivelTanque < 30) {
+                setTimeout(() => {
+                    alert("El tanque tiene menos del 30%. Se debe llenar el tanque de nuevo Nivel del tanque: "+nivelTanque);
+                }, 500); 
+            }
+        }
+    }, [data.waterTankLevel, initialLoad, alertsReady]);
+
+    useEffect( () => {
+        if (alertsReady && !initialLoad) {
+            const temperaturaInterna = data.indoorTemperature.length > 0 ? data.indoorTemperature[data.indoorTemperature.length - 1] : 0;
+            if (temperaturaInterna > 35) {
+                setTimeout(() => {
+                    alert("La temperatura ha excedido los 35 grados, el aire acondicionado se ha activado para mantener la temperatura ideal. Temperatura actual: "+temperaturaInterna);
+                }, 500); 
+            }
+        }
+    }, [data.indoorTemperature, initialLoad, alertsReady]);
 
     return (
         <>
