@@ -58,9 +58,62 @@ def get_level_data():
         logging.error(f"Error al obtener datos de level_data: {e}")
         return jsonify({'error': 'Error al obtener datos de level_data'}), 500
 
-@app.route('/api/data-range', methods=['POST'])
-def get_data_range():
+# Rutas para obtener datos en un rango de fechas
+@app.route('/api/data-range-sensor', methods=['POST'])
+def get_data_range_sensor():
     try:
+        data = request.json
+        start_date = data.get("start_date")
+        end_date = data.get("end_date")
+
+        if not start_date or not end_date:
+            return jsonify({"error": "Start y end son requeridos"}), 400
+    # Se verifica que las fechas tengan el formato correcto
+        try:
+            start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        except ValueError:
+            return jsonify({"error": "Formato invalido. Use el formato (YYYY-MM-DDTHH:MM)."}), 400
+
+        if start > end:
+            return jsonify({"error": "start debe ir antes que end"}), 400
+
+        cur = mysql.connection.cursor()
+        cur.execute("""
+            SELECT timestamp, indoorTemperature, outdoorTemperature, humidity, 
+                   bombActivation, airActivation
+            FROM sensor_data 
+            WHERE timestamp BETWEEN %s AND %s
+            ORDER BY timestamp
+        """, (start, end))
+        rows = cur.fetchall()
+        cur.close()
+        
+        if not rows:
+            return jsonify({"message": "No existen datos en ese rango. Intente nuevamente."}), 404
+# Se crea un diccionario con los datos obtenidos
+        data = []
+        for row in rows:
+            data.append({
+                'timestamp': row[0].isoformat(),
+                'indoorTemperature': row[1],
+                'outdoorTemperature': row[2],
+                'humidity': row[3],
+                'bombActivation': row[4],
+                'airActivation': row[5]
+            })
+# Se retorna el diccionario en formato JSON
+        return jsonify(data)
+
+    except Exception as e:
+        logging.error(f"Error retrieving sensor data range: {e}")
+        return jsonify({'error': 'Error processing request'}), 500
+
+# Rutas para obtener datos en un rango de fechas
+@app.route('/api/data-range-level', methods=['POST'])
+def get_data_range_level():
+    try:
+        # Se obtienen los datos enviados en el request
         data = request.json
         start_date = data.get("start_date")
         end_date = data.get("end_date")
@@ -76,67 +129,31 @@ def get_data_range():
 
         if start > end:
             return jsonify({"error": "start debe ir antes que end"}), 400
-
-        #  Obteniendo datos de sensores
+    # Se realiza la consulta a la base de datos
         cur = mysql.connection.cursor()
-        cur.execute("""
-            SELECT timestamp, indoorTemperature, outdoorTemperature, humidity 
-            FROM sensor_data 
-            WHERE timestamp BETWEEN %s AND %s
-            ORDER BY timestamp
-        """, (start, end))
-        sensor_rows = cur.fetchall()
-
-        # Obteniendo datos de nivel de agua
         cur.execute("""
             SELECT timestamp, waterTankLevel 
             FROM level_data 
             WHERE timestamp BETWEEN %s AND %s
             ORDER BY timestamp
         """, (start, end))
-        level_rows = cur.fetchall()
+        rows = cur.fetchall()
         cur.close()
 
-        if not sensor_rows and not level_rows:
+        if not rows:
             return jsonify({"message": "No existen datos en ese rango. Intente nuevamente."}), 404
-
+    #Se crea un diccionario con los datos obtenidos
         data = []
-        timestamps = set()
-
-        # Procesando datos de sensores, con el nivel de agua en null.
-        for row in sensor_rows:
-            timestamps.add(row[0])
+        for row in rows:
             data.append({
                 'timestamp': row[0].isoformat(),
-                'indoorTemperature': row[1],
-                'outdoorTemperature': row[2],
-                'humidity': row[3],
-                'waterTankLevel': None
+                'waterTankLevel': row[1]
             })
-
-        # Procesando datos de nivel de agua
-        for row in level_rows:
-            timestamp = row[0]
-            # Si el timestamp ya existe en los datos de sensores, se actualiza el nivel de agua.
-            if timestamp in timestamps:
-                for entry in data:
-                    if entry['timestamp'] == timestamp.isoformat():
-                        entry['waterTankLevel'] = row[1]
-                        break
-            # Si no existe, se agrega un nuevo registro con el nivel de agua con los demas valores en null.
-            else:
-                data.append({
-                    'timestamp': timestamp.isoformat(),
-                    'indoorTemperature': None,
-                    'outdoorTemperature': None,
-                    'humidity': None,
-                    'waterTankLevel': row[1]
-                })
-        #logging.info(f"Data: {data}")
-        return jsonify(sorted(data, key=lambda x: x['timestamp']))
+# Se retorna el diccionario en formato JSON
+        return jsonify(data)
 
     except Exception as e:
-        logging.error(f"Error retrieving data range: {e}")
+        logging.error(f"Error retrieving level data range: {e}")
         return jsonify({'error': 'Error processing request'}), 500
 
 if __name__ == '__main__':

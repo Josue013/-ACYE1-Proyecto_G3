@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Line } from 'react-chartjs-2';
-import { getDataRange } from './Services/APIs/Api';
+import { getDataRangeSensor, getDataRangeLevel } from './Services/APIs/Api';
 import './TiempoRango.css';
 
 export function TiempoRango() {
@@ -11,7 +11,9 @@ export function TiempoRango() {
         indoorTemperature: [],
         outdoorTemperature: [],
         humidity: [],
-        waterTankLevel: []
+        waterTankLevel: [],
+        bombActivation: [],
+        airActivation: []
     });
     const [error, setError] = useState('');
 
@@ -22,7 +24,9 @@ export function TiempoRango() {
             indoorTemperature: [],
             outdoorTemperature: [],
             humidity: [],
-            waterTankLevel: []
+            waterTankLevel: [],
+            bombActivation: [],
+            airActivation: []
         });
 
         if (!startDate || !endDate) {
@@ -31,16 +35,22 @@ export function TiempoRango() {
         }
 
         try {
-            const data = await getDataRange(startDate, endDate);
-            const processedData = {
-                timestamps: data.map(item => new Date(item.timestamp).toLocaleString()),
-                indoorTemperature: data.map(item => item.indoorTemperature),
-                outdoorTemperature: data.map(item => item.outdoorTemperature),
-                humidity: data.map(item => item.humidity),
-                waterTankLevel: data.map(item => item.waterTankLevel)
+            // Obtener datos de sensores y nivel de tanque de agua
+            const sensorData = await getDataRangeSensor(startDate, endDate);
+            const levelData = await getDataRangeLevel(startDate, endDate);
+
+            // Procesar datos para gráficas
+            const processedSensorData = {
+                timestamps: sensorData.map(item => new Date(item.timestamp).toLocaleString()),
+                indoorTemperature: sensorData.map(item => item.indoorTemperature),
+                outdoorTemperature: sensorData.map(item => item.outdoorTemperature),
+                humidity: sensorData.map(item => item.humidity),
+                bombActivation: sensorData.map(item => item.bombActivation),
+                airActivation: sensorData.map(item => item.airActivation),
+                waterTankLevel: levelData.map(item => item.waterTankLevel)
             };
 
-            setDataRange(processedData);
+            setDataRange(processedSensorData);
         } catch (err) {
             setError(err.response?.data?.message || 'Error al obtener datos');
         }
@@ -60,19 +70,17 @@ export function TiempoRango() {
         }
     };
 
-    // Opciones específicas para la gráfica de humedad
-    const humidityChartOptions = {
+    // Opciones específicas para gráficas digitales (humedad, bomba, aire)
+    const digitalChartOptions = {
         ...baseChartOptions,
         scales: {
             y: {
                 beginAtZero: true,
-                max: 1.2, // Un poco más de 1 para mejor visualización
+                max: 1.2,
                 ticks: {
                     stepSize: 1,
                     callback: function(value) {
-                        if (value === 0) {
-                            return `0`;
-                        }
+                        if (value === 0) return '0';
                         if (value === 1) return '1';
                         return '';
                     }
@@ -88,10 +96,10 @@ export function TiempoRango() {
             data: data.length > 0 ? data : [0],
             borderColor: color,
             backgroundColor: color.replace(')', ', 0.2)'),
-            tension: isDigital ? 0 : 0.1, // Sin curvas para señal digital
+            tension: isDigital ? 0 : 0.1,
             pointStyle: isDigital ? 'rect' : 'circle',
             pointRadius: isDigital ? 2 : 4,
-            stepped: isDigital ? 'before' : false, // Efecto de señal digital
+            stepped: isDigital ? 'before' : false,
             borderWidth: isDigital ? 2 : 1,
             segment: {
                 borderColor: ctx => isDigital ? color : undefined
@@ -148,7 +156,21 @@ export function TiempoRango() {
                         <h3>Estado de Humedad</h3>
                         <Line 
                             data={createChartData('Estado de Humedad', dataRange.humidity, dataRange.timestamps, 'rgb(255, 99, 132)', true)} 
-                            options={humidityChartOptions} 
+                            options={digitalChartOptions} 
+                        />
+                    </div>
+                    <div className="chart">
+                        <h3>Activación de la Bomba de Agua</h3>
+                        <Line 
+                            data={createChartData('Estado de la Bomba', dataRange.bombActivation, dataRange.timestamps, 'rgb(54, 162, 235)', true)} 
+                            options={digitalChartOptions} 
+                        />
+                    </div>
+                    <div className="chart">
+                        <h3>Activación del Aire Acondicionado</h3>
+                        <Line 
+                            data={createChartData('Estado del Aire', dataRange.airActivation, dataRange.timestamps, 'rgb(75, 192, 192)', true)} 
+                            options={digitalChartOptions} 
                         />
                     </div>
                     <div className="chart">

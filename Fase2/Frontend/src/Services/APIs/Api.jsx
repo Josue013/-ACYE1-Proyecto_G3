@@ -28,15 +28,29 @@ export const getLevelData = async () => {
     }
 };
 
-export const getDataRange = async (startDate, endDate) => {
+
+export const getDataRangeSensor = async (startDate, endDate) => {
     try {
-        const response = await api.post('/api/data-range', {
+        const response = await api.post('/api/data-range-sensor', {
             start_date: startDate,
             end_date: endDate
         });
         return response.data;
     } catch (error) {
-        console.error('Error fetching data range:', error);
+        console.error('Error fetching sensor data range:', error);
+        throw error;
+    }
+};
+
+export const getDataRangeLevel = async (startDate, endDate) => {
+    try {
+        const response = await api.post('/api/data-range-level', {
+            start_date: startDate,
+            end_date: endDate
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching level data range:', error);
         throw error;
     }
 };
