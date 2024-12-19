@@ -16,6 +16,8 @@ export function TiempoReal() {
         waterTankLevel: [],
     });
 
+    const [initialLoad, setInitialLoad] = useState(true);
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -40,6 +42,7 @@ export function TiempoReal() {
                     ...prevData,
                     waterTankLevel: [...prevData.waterTankLevel, latestData.waterTankLevel].slice(-10),
                 }));
+                setInitialLoad(false);
             } catch (error) {
                 console.error('Error fetching level data:', error);
             }
@@ -61,6 +64,19 @@ export function TiempoReal() {
     const textoHumedad = humedadActual === 1 ? "Hay humedad :)" : "No hay humedad :(";
 
     let delayed;
+
+    const doughnutChartOptions = {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'top',
+            },
+            title: {
+                display: true,
+                text: 'Nivel del tanque de agua (%)',
+            },
+        },
+    };
 
     const lineChartOptions = {
         responsive: true,
@@ -125,18 +141,17 @@ export function TiempoReal() {
                     <p className='TextHumedad'>{textoHumedad}</p>
                 </div>
 
-                <div className="grafica">
-                    <Line data={{
-                        labels: data.waterTankLevel.map((_, index) => index),
+                <div className="grafica doughnut-container">
+                    <Doughnut data={{
+                        labels: ['Nivel de Agua', 'Espacio Vacío'],
                         datasets: [{
                             label: 'Nivel del tanque de agua',
-                            data: data.waterTankLevel,
-                            borderColor: 'rgba(255, 159, 64, 1)',
-                            backgroundColor: 'rgba(255, 159, 64, 0.2)',
-                            pointStyle: 'circle',
-                            pointRadius: 4,
+                            data: initialLoad ? [0, 100] : [data.waterTankLevel[data.waterTankLevel.length - 1], 100 - data.waterTankLevel[data.waterTankLevel.length - 1]],
+                            backgroundColor: ['rgba(255, 159, 64, 0.2)', 'rgba(200, 200, 200, 0.2)'],
+                            borderColor: ['rgba(255, 159, 64, 1)', 'rgba(200, 200, 200, 1)'],
+                            borderWidth: 1,
                         }],
-                    }} options={lineChartOptions} />
+                    }} options={doughnutChartOptions} />
                 </div>
             </div>
         </>
