@@ -8,26 +8,22 @@ export function TiempoRango() {
     const [endDate, setEndDate] = useState('');
     const [dataRange, setDataRange] = useState({
         timestamps: [],
-        temperature: [],
-        humidityRelative: [],
-        humidityAbsolute: [],
-        windSpeed: [],
-        barometricPressure: []
+        indoorTemperature: [],
+        outdoorTemperature: [],
+        humidity: [],
+        waterTankLevel: []
     });
     const [error, setError] = useState('');
 
     const handleFindData = async () => {
-
         setError('');
         setDataRange({
             timestamps: [],
-            temperature: [],
-            humidityRelative: [],
-            humidityAbsolute: [],
-            windSpeed: [],
-            barometricPressure: []
+            indoorTemperature: [],
+            outdoorTemperature: [],
+            humidity: [],
+            waterTankLevel: []
         });
-
 
         if (!startDate || !endDate) {
             setError('Por favor seleccione fechas de inicio y fin');
@@ -38,11 +34,10 @@ export function TiempoRango() {
             const data = await getDataRange(startDate, endDate);
             const processedData = {
                 timestamps: data.map(item => new Date(item.timestamp).toLocaleString()),
-                temperature: data.map(item => item.temperature),
-                humidityRelative: data.map(item => item.humidityRelative),
-                humidityAbsolute: data.map(item => item.humidityAbsolute),
-                windSpeed: data.map(item => item.windSpeed),
-                barometricPressure: data.map(item => item.barometricPressure)
+                indoorTemperature: data.map(item => item.indoorTemperature),
+                outdoorTemperature: data.map(item => item.outdoorTemperature),
+                humidity: data.map(item => item.humidity),
+                waterTankLevel: data.map(item => item.waterTankLevel)
             };
 
             setDataRange(processedData);
@@ -51,7 +46,7 @@ export function TiempoRango() {
         }
     };
 
-    const chartOptions = {
+    const baseChartOptions = {
         responsive: true,
         plugins: {
             legend: {
@@ -65,13 +60,42 @@ export function TiempoRango() {
         }
     };
 
-    const createChartData = (label, data, timestamps) => ({
+    // Opciones específicas para la gráfica de humedad
+    const humidityChartOptions = {
+        ...baseChartOptions,
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 1.2, // Un poco más de 1 para mejor visualización
+                ticks: {
+                    stepSize: 1,
+                    callback: function(value) {
+                        if (value === 0) {
+                            return `0`;
+                        }
+                        if (value === 1) return '1';
+                        return '';
+                    }
+                }
+            }
+        }
+    };
+
+    const createChartData = (label, data, timestamps, color = 'rgb(75, 192, 192)', isDigital = false) => ({
         labels: timestamps,
         datasets: [{
             label: label,
             data: data.length > 0 ? data : [0],
-            borderColor: 'rgb(75, 192, 192)',
-            tension: 0.1
+            borderColor: color,
+            backgroundColor: color.replace(')', ', 0.2)'),
+            tension: isDigital ? 0 : 0.1, // Sin curvas para señal digital
+            pointStyle: isDigital ? 'rect' : 'circle',
+            pointRadius: isDigital ? 2 : 4,
+            stepped: isDigital ? 'before' : false, // Efecto de señal digital
+            borderWidth: isDigital ? 2 : 1,
+            segment: {
+                borderColor: ctx => isDigital ? color : undefined
+            }
         }]
     });
 
@@ -107,38 +131,31 @@ export function TiempoRango() {
 
                 <div className="charts-container">
                     <div className="chart">
-                        <h3>Temperatura</h3>
+                        <h3>Temperatura Interna</h3>
                         <Line 
-                            data={createChartData('Temperatura', dataRange.temperature, dataRange.timestamps)} 
-                            options={chartOptions} 
+                            data={createChartData('Temperatura Interna °C', dataRange.indoorTemperature, dataRange.timestamps, 'rgb(75, 192, 192)')} 
+                            options={baseChartOptions} 
                         />
                     </div>
                     <div className="chart">
-                        <h3>Humedad Relativa</h3>
+                        <h3>Temperatura Externa</h3>
                         <Line 
-                            data={createChartData('Humedad Relativa', dataRange.humidityRelative, dataRange.timestamps)} 
-                            options={chartOptions} 
+                            data={createChartData('Temperatura Externa °C', dataRange.outdoorTemperature, dataRange.timestamps, 'rgb(153, 102, 255)')} 
+                            options={baseChartOptions} 
                         />
                     </div>
                     <div className="chart">
-                        <h3>Humedad Absoluta</h3>
+                        <h3>Estado de Humedad</h3>
                         <Line 
-                            data={createChartData('Humedad Absoluta', dataRange.humidityAbsolute, dataRange.timestamps)} 
-                            options={chartOptions} 
+                            data={createChartData('Estado de Humedad', dataRange.humidity, dataRange.timestamps, 'rgb(255, 99, 132)', true)} 
+                            options={humidityChartOptions} 
                         />
                     </div>
                     <div className="chart">
-                        <h3>Velocidad del Viento</h3>
+                        <h3>Nivel del Tanque de Agua</h3>
                         <Line 
-                            data={createChartData('Velocidad del Viento', dataRange.windSpeed, dataRange.timestamps)} 
-                            options={chartOptions} 
-                        />
-                    </div>
-                    <div className="chart">
-                        <h3>Presión Barométrica</h3>
-                        <Line 
-                            data={createChartData('Presión Barométrica', dataRange.barometricPressure, dataRange.timestamps)} 
-                            options={chartOptions} 
+                            data={createChartData('Nivel del Tanque %', dataRange.waterTankLevel, dataRange.timestamps, 'rgb(255, 159, 64)')} 
+                            options={baseChartOptions} 
                         />
                     </div>
                 </div>
