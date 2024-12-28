@@ -11,15 +11,6 @@ import { generateCSV } from './Services/APIs/Api';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ArcElement);
 
-
-const encenderAire = () => {
-  alert('Encendiendo aire acondicionado');
-}
-
-const apagarAire = () => {
-  alert('Apagando aire acondicionado');
-}
-
 const handleGenerateCSV = async () => {
   try {
     await generateCSV();
@@ -35,15 +26,6 @@ function App() {
       <nav className="navbar">
         <Link to="/" className="navbar-button">Tiempo Real</Link>
         <Link to="/TiempoRango" className="navbar-button">Rango de Tiempo</Link>
-
-        {/* Lista desplegable profesional */}
-        <div className="navbar-dropdown">
-          <button className="navbar-button dropdown-toggle">Aire Acondicionado</button>
-          <div className="dropdown-menu">
-            <button className="dropdown-item" onClick={encenderAire}>Encender</button>
-            <button className="dropdown-item" onClick={apagarAire}>Apagar</button>
-          </div>
-        </div>
         <button className="navbar-button" onClick={handleGenerateCSV}>Generar CSV</button>
       </nav>
       <Routes>
