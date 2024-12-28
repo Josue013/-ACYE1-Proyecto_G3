@@ -1,0 +1,31 @@
+# Directorios de dependencias
+node_modules/
+
+# Archivos de compilación y salida
+dist/
+build/
+
+# Archivos de configuración de entorno
+.env
+.env.local
+.env.*.local
+
+# Cachés y logs
+.vscode/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archivos del editor de texto
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# Configuración local de ESLint y Prettier
+.eslintcache
+.prettiercache
+
+# Archivos de sistemas operativos
+Thumbs.db

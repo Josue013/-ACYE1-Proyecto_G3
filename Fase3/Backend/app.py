@@ -1,184 +1,284 @@
-from flask import Flask, request, jsonify
+import csv
+from flask import Flask, jsonify, request
+from flask_mysqldb import MySQL
+from flask_cors import CORS
+import config
 import logging
-import time
-import board
-import busio
-import adafruit_dht
-import adafruit_bmp280
-import RPi.GPIO as GPIO
-import mysql.connector
+from datetime import datetime
+import os
 
-# Configuraciones iniciales
-SENSOR = adafruit_dht.DHT11(board.D22)
-i2c = busio.I2C(board.SCL, board.SDA)
-sensor_bmp280 = adafruit_bmp280.Adafruit_BMP280_I2C(i2c, address=0x76)
-sensor_bmp280.sea_level_pressure = 1013.25 + (1.691 * 12)
-
-# Configuración de pines
-TRIG = 23
-ECHO = 24
-bomba_pin = 5
-FAN_PIN = 17
-
-# Configuración GPIO
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(TRIG, GPIO.OUT)
-GPIO.setup(ECHO, GPIO.IN)
-GPIO.setup(bomba_pin, GPIO.OUT)
-GPIO.setup(FAN_PIN, GPIO.OUT)
-
-# Configuración MySQL
-conn = mysql.connector.connect(
-    host='34.86.159.88',
-    user='root',
-    password='0`zm%i^xZp82{%0j',
-    database='fase1'
-)
-cursor = conn.cursor()
-
-# Variables globales
-TURN_ON_THRESHOLD = 35
-TURN_OFF_THRESHOLD = 25
-ALTURA_RECIPIENTE = 15.0
-DISTANCIA_SENSOR = 3.0
-fan_on = False
-bomb_status = 0
-fan_status = 0
-
-# Configuración Flask
 app = Flask(__name__)
-logging.basicConfig(level=logging.DEBUG)
+CORS(app)
 
-# Funcion para medir la distancia
-def medida_distancia():
-    GPIO.output(TRIG, GPIO.LOW)
-    time.sleep(0.001)
-    GPIO.output(TRIG, GPIO.HIGH)
-    time.sleep(0.001)
-    GPIO.output(TRIG, GPIO.LOW)
+app.config['MYSQL_HOST'] = config.MYSQL_HOST
+app.config['MYSQL_USER'] = config.MYSQL_USER
+app.config['MYSQL_PASSWORD'] = config.MYSQL_PASSWORD
+app.config['MYSQL_DB'] = config.MYSQL_DB
 
-    while GPIO.input(ECHO) == GPIO.LOW:
-        pulso_inicio = time.time()
-    while GPIO.input(ECHO) == GPIO.HIGH:
-        pulso_fin = time.time()
+mysql = MySQL(app)
+logging.basicConfig(level=logging.INFO)
 
-    duracion = pulso_fin - pulso_inicio
-    distancia = (34300 * duracion) / 2
-    return distancia
-
-# Funcion para calcular el porcentaje de agua
-def calcular_porcentaje(distancia_agua):
-    altura_agua = ALTURA_RECIPIENTE - (distancia_agua - DISTANCIA_SENSOR)
-    if altura_agua < 0:
-        altura_agua = 0
-    porcentaje = (altura_agua / ALTURA_RECIPIENTE) * 100
-    return min(porcentaje, 100)
-
-# Sistema de riego
-@app.route('/sis-riego-on-off', methods=['POST'])
-def sis_riego_on_off():
-    global bomb_status
-    data = request.form.get("data")
-    logging.info(data)
-    respuesta = ""
-    if data == "on":
-        GPIO.output(bomba_pin, GPIO.HIGH)
-        bomb_status = 1
-        respuesta = "Encendido"
-    elif data == "off":
-        GPIO.output(bomba_pin, GPIO.LOW)
-        bomb_status = 0
-        respuesta = "Apagado"
-    else:
-        respuesta = "Error"
-    logging.info(respuesta)
-    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    cursor.execute('''
-        INSERT INTO bombActivation (timestamp, bomb)
-        VALUES (%s, %s)
-    ''', (timestamp, bomb_status))
-    conn.commit()
-    return jsonify({"respuesta": respuesta})
-
-# Tiempo de riego
-@app.route('/tiempo-riego', methods=['POST'])
-def tiempo_riego():
-    data = request.form.get("data")
-    logging.info(data)
-    respuesta = ""
+@app.route('/api/data', methods=['GET'])
+def get_data():
     try:
-        tiempo = int(data)
-        if tiempo in [5, 10, 15, 20]:
-            respuesta = f"{tiempo} segundos"
-            GPIO.output(bomba_pin, GPIO.HIGH)
-            time.sleep(tiempo)
-            GPIO.output(bomba_pin, GPIO.LOW)
-        else:
-            respuesta = "Error"
-    except ValueError:
-        respuesta = "Error"
-    logging.info(respuesta)
-    return jsonify({"respuesta": respuesta})
+        cur = mysql.connection.cursor()
+        
+        # Obtener todos los registros de cada columna, asegurándose de que no sean nulos
+        cur.execute("SELECT timestamp, indoorTemperature FROM sensor_data WHERE indoorTemperature IS NOT NULL ORDER BY timestamp")
+        indoor_temp_data = cur.fetchall()
 
-# Humedad de la tierra
-@app.route('/humedad-tierra', methods=['GET'])
-def humedad_tierra():
-    try:
-        humedad = SENSOR.humidity
-        if humedad is not None:
-            logging.info(humedad)
-            return jsonify({"humidity": round(humedad, 1)})
-        else:
-            return jsonify({"error": "Error al leer el sensor DHT11"}), 500
-    except RuntimeError as e:
-        return jsonify({"error": f"Error de lectura del sensor: {str(e)}"}), 500
+        cur.execute("SELECT timestamp, outdoorTemperature FROM sensor_data WHERE outdoorTemperature IS NOT NULL ORDER BY timestamp")
+        outdoor_temp_data = cur.fetchall()
+
+        cur.execute("SELECT timestamp, humidity FROM sensor_data WHERE humidity IS NOT NULL ORDER BY timestamp")
+        humidity_data = cur.fetchall()
+
+        cur.close()
+
+        # Combinar los datos
+        data = []
+        for i in range(max(len(indoor_temp_data), len(outdoor_temp_data), len(humidity_data))):
+            row = {}
+            if i < len(indoor_temp_data):
+                row['timestamp'] = indoor_temp_data[i][0].strftime('%Y-%m-%d %H:%M:%S')
+                row['indoorTemperature'] = indoor_temp_data[i][1]
+            if i < len(outdoor_temp_data):
+                row['timestamp'] = outdoor_temp_data[i][0].strftime('%Y-%m-%d %H:%M:%S')
+                row['outdoorTemperature'] = outdoor_temp_data[i][1]
+            if i < len(humidity_data):
+                row['timestamp'] = humidity_data[i][0].strftime('%Y-%m-%d %H:%M:%S')
+                row['humidity'] = humidity_data[i][1]
+            data.append(row)
+
+        return jsonify(data)
     except Exception as e:
-        return jsonify({"error": f"Error inesperado: {str(e)}"}), 500
+        logging.error(f"Error al obtener datos: {e}")
+        return jsonify({'error': 'Error al obtener datos'}), 500
 
-# Aire acondicionado
-@app.route('/aire-acondicionado-on-off', methods=['POST'])
-def aire_acondicionado_on_off():
-    global fan_status
-    data = request.form.get("data")
-    logging.info(data)
-    respuesta = ""
-    if data == "on":
-        GPIO.output(FAN_PIN, GPIO.HIGH)
-        fan_status = 1
-        respuesta = "Encendido"
-    elif data == "off":
-        GPIO.output(FAN_PIN, GPIO.LOW)
-        fan_status = 0
-        respuesta = "Apagado"
-    else:
-        respuesta = "Error"
-    logging.info(respuesta)
-    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    cursor.execute('''
-        INSERT INTO sensor_data (timestamp, airActivation)
-        VALUES (%s, %s)
-    ''', (timestamp, fan_status))
-    conn.commit()
-    return jsonify({"respuesta": respuesta})
-
-# Nivel de agua del tanque en %
-@app.route('/nivel-agua-tanque', methods=['GET'])
-def nivel_agua_tanque():
+@app.route('/api/level-data', methods=['GET'])
+def get_level_data():
     try:
-        distancia_agua = medida_distancia()
-        porcentaje_agua = calcular_porcentaje(distancia_agua)
-        logging.info(porcentaje_agua)
-        return jsonify({"waterTankLevel": round(porcentaje_agua, 1)})
-    except Exception as e:
-        return jsonify({"error": f"Error inesperado: {str(e)}"}), 500
+        cur = mysql.connection.cursor()
+        
+        # Obtener todos los registros de la columna waterTankLevel, asegurándose de que no sean nulos
+        cur.execute("SELECT timestamp, waterTankLevel FROM level_data WHERE waterTankLevel IS NOT NULL ORDER BY timestamp")
+        water_level_data = cur.fetchall()
 
+        cur.close()
+
+        # Combinar los datos
+        data = []
+        for row in water_level_data:
+            data.append({
+                'timestamp': row[0].strftime('%Y-%m-%d %H:%M:%S'),
+                'waterTankLevel': row[1],
+            })
+
+        return jsonify(data)
+    except Exception as e:
+        logging.error(f"Error al obtener datos de level_data: {e}")
+        return jsonify({'error': 'Error al obtener datos de level_data'}), 500
+
+
+# Generar CSV
+@app.route('/api/generate-csv', methods=['GET'])
+def generate_csv():
+    try:
+        cur = mysql.connection.cursor()
+
+        # Obtener los últimos 5 registros de cada columna, asegurándose de que no sean nulos
+        cur.execute("SELECT timestamp, indoorTemperature FROM sensor_data WHERE indoorTemperature IS NOT NULL ORDER BY timestamp DESC LIMIT 5")
+        indoor_temp_data = cur.fetchall()
+
+        cur.execute("SELECT timestamp, outdoorTemperature FROM sensor_data WHERE outdoorTemperature IS NOT NULL ORDER BY timestamp DESC LIMIT 5")
+        outdoor_temp_data = cur.fetchall()
+
+        cur.execute("SELECT timestamp, humidity FROM sensor_data WHERE humidity IS NOT NULL ORDER BY timestamp DESC LIMIT 5")
+        humidity_data = cur.fetchall()
+
+        cur.execute("SELECT timestamp, waterTankLevel FROM level_data WHERE waterTankLevel IS NOT NULL ORDER BY timestamp DESC LIMIT 5")
+        water_level_data = cur.fetchall()
+
+        cur.close()
+
+        # Combinar los datos
+        combined_data = []
+        for i in range(max(len(indoor_temp_data), len(outdoor_temp_data), len(humidity_data), len(water_level_data))):
+            row = {}
+            if i < len(indoor_temp_data):
+                row['timestamp'] = indoor_temp_data[i][0].strftime('%Y-%m-%d %H:%M:%S')
+                row['indoorTemperature'] = indoor_temp_data[i][1]
+            if i < len(outdoor_temp_data):
+                row['timestamp'] = outdoor_temp_data[i][0].strftime('%Y-%m-%d %H:%M:%S')
+                row['outdoorTemperature'] = outdoor_temp_data[i][1]
+            if i < len(humidity_data):
+                row['timestamp'] = humidity_data[i][0].strftime('%Y-%m-%d %H:%M:%S')
+                row['humidity'] = humidity_data[i][1]
+            if i < len(water_level_data):
+                row['timestamp'] = water_level_data[i][0].strftime('%Y-%m-%d %H:%M:%S')
+                row['waterTankLevel'] = water_level_data[i][1]
+            combined_data.append(row)
+
+        # Crear el archivo CSV en la misma carpeta que app.py
+        file_path = os.path.join(os.path.dirname(__file__), 'data.csv')
+        with open(file_path, mode='w', newline='', encoding='utf-8') as file:
+            writer = csv.DictWriter(file, fieldnames=['Fecha y Hora', 'Temperatura Externa', 'Temperatura Interna', 'Humedad Relativa', 'Nivel de Agua en el Tanque'], delimiter=';')
+            writer.writeheader()
+            for row in combined_data:
+                writer.writerow({
+                    'Fecha y Hora': row.get('timestamp', ''),
+                    'Temperatura Externa': row.get('outdoorTemperature', ''),
+                    'Temperatura Interna': row.get('indoorTemperature', ''),
+                    'Humedad Relativa': row.get('humidity', ''),
+                    'Nivel de Agua en el Tanque': row.get('waterTankLevel', '')
+                })
+
+        return jsonify({'message': 'CSV generado exitosamente en la carpeta Backend'}), 200
+
+    except Exception as e:
+        logging.error(f"Error generating CSV: {e}")
+        return jsonify({'error': 'Error generating CSV'}), 500
+
+
+#
+@app.route('/api/data-range-sensor', methods=['POST'])
+def get_data_range_sensor():
+    try:
+        data = request.json
+        start_date = data.get("start_date")
+        end_date = data.get("end_date")
+
+        if not start_date or not end_date:
+            return jsonify({"error": "Start y end son requeridos"}), 400
+
+        try:
+            start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        except ValueError:
+            return jsonify({"error": "Formato inválido. Use el formato (YYYY-MM-DDTHH:MM)."}), 400
+
+        if start > end:
+            return jsonify({"error": "start debe ir antes que end"}), 400
+
+        cur = mysql.connection.cursor()
+        cur.execute("""
+            SELECT timestamp, indoorTemperature, outdoorTemperature, humidity, 
+                   airActivation
+            FROM sensor_data 
+            WHERE timestamp BETWEEN %s AND %s
+            ORDER BY timestamp
+        """, (start, end))
+        rows = cur.fetchall()
+        cur.close()
+        
+        if not rows:
+            return jsonify({"message": "No existen datos en ese rango. Intente nuevamente."}), 404
+
+        data = []
+        for row in rows:
+            data.append({
+                'timestamp': row[0].isoformat(),
+                'indoorTemperature': row[1],
+                'outdoorTemperature': row[2],
+                'humidity': row[3],
+                'airActivation': row[4]
+            })
+
+        return jsonify(data)
+
+    except Exception as e:
+        logging.error(f"Error retrieving sensor data range: {e}")
+        return jsonify({'error': 'Error processing request'}), 500
+
+@app.route('/api/data-range-bomb', methods=['POST'])
+def get_data_range_bomb():
+    try:
+        data = request.json
+        start_date = data.get("start_date")
+        end_date = data.get("end_date")
+
+        if not start_date or not end_date:
+            return jsonify({"error": "Start y end son requeridos"}), 400
+
+        try:
+            start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        except ValueError:
+            return jsonify({"error": "Formato inválido. Use el formato (YYYY-MM-DDTHH:MM)."}), 400
+
+        if start > end:
+            return jsonify({"error": "start debe ir antes que end"}), 400
+
+        cur = mysql.connection.cursor()
+        cur.execute("""
+            SELECT timestamp, bomb 
+            FROM bombActivation 
+            WHERE timestamp BETWEEN %s AND %s
+            ORDER BY timestamp
+        """, (start, end))
+        rows = cur.fetchall()
+        cur.close()
+
+        if not rows:
+            return jsonify({"message": "No existen datos en ese rango. Intente nuevamente."}), 404
+
+        data = []
+        for row in rows:
+            data.append({
+                'timestamp': row[0].isoformat(),
+                'bombActivation': row[1]
+            })
+
+        return jsonify(data)
+
+    except Exception as e:
+        logging.error(f"Error retrieving bomb activation data range: {e}")
+        return jsonify({'error': 'Error processing request'}), 500
+
+@app.route('/api/data-range-level', methods=['POST'])
+def get_data_range_level():
+    try:
+        data = request.json
+        start_date = data.get("start_date")
+        end_date = data.get("end_date")
+
+        if not start_date or not end_date:
+            return jsonify({"error": "Start y end son requeridos"}), 400
+
+        try:
+            start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        except ValueError:
+            return jsonify({"error": "Formato inválido. Use el formato (YYYY-MM-DDTHH:MM)."}), 400
+
+        if start > end:
+            return jsonify({"error": "start debe ir antes que end"}), 400
+
+        cur = mysql.connection.cursor()
+        cur.execute("""
+            SELECT timestamp, waterTankLevel 
+            FROM level_data 
+            WHERE timestamp BETWEEN %s AND %s
+            ORDER BY timestamp
+        """, (start, end))
+        rows = cur.fetchall()
+        cur.close()
+
+        if not rows:
+            return jsonify({"message": "No existen datos en ese rango. Intente nuevamente."}), 404
+
+        data = []
+        for row in rows:
+            data.append({
+                'timestamp': row[0].isoformat(),
+                'waterTankLevel': row[1]
+            })
+
+        return jsonify(data)
+
+    except Exception as e:
+        logging.error(f"Error retrieving level data range: {e}")
+        return jsonify({'error': 'Error processing request'}), 500
 
 if __name__ == '__main__':
-    try:
-        app.run(host='0.0.0.0', port=5000)
-    except KeyboardInterrupt:
-        print("Servidor detenido")
-    finally:
-        GPIO.cleanup()
-        cursor.close()
-        conn.close()
+    app.run(debug=True)
