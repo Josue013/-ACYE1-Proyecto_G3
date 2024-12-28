@@ -122,7 +122,7 @@ def generate_csv():
         # Crear el archivo CSV en la misma carpeta que app.py
         file_path = os.path.join(os.path.dirname(__file__), 'data.csv')
         with open(file_path, mode='w', newline='', encoding='utf-8') as file:
-            writer = csv.DictWriter(file, fieldnames=['Fecha y Hora', 'Temperatura Externa', 'Temperatura Interna', 'Humedad Relativa', 'Nivel de Agua en el Tanque'], delimiter=';')
+            writer = csv.DictWriter(file, fieldnames=['Fecha y Hora', 'Temperatura Externa', 'Temperatura Interna', 'Humedad Relativa', 'Nivel de Agua en el Tanque'], delimiter=',')
             writer.writeheader()
             for row in combined_data:
                 writer.writerow({
