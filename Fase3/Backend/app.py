@@ -6,10 +6,14 @@ import config
 import logging
 from datetime import datetime
 import os
+from werkzeug.utils import secure_filename
+import pandas as pd
+from statistics import mode
 
 app = Flask(__name__)
 CORS(app)
 
+# Configuración de la base de datos
 app.config['MYSQL_HOST'] = config.MYSQL_HOST
 app.config['MYSQL_USER'] = config.MYSQL_USER
 app.config['MYSQL_PASSWORD'] = config.MYSQL_PASSWORD
@@ -17,6 +21,111 @@ app.config['MYSQL_DB'] = config.MYSQL_DB
 
 mysql = MySQL(app)
 logging.basicConfig(level=logging.INFO)
+
+# Configuración de la carpeta de subida de archivos
+UPLOAD_FOLDER = 'Fase3/Backend/uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Crear la carpeta de subida de archivos si no existe
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+# función para cargar los datos del CSV
+def load_data(file_path):
+    """Carga los datos del CSV"""
+    return pd.read_csv(file_path, parse_dates=['Fecha y Hora'])
+
+# función para calcular las estadísticas
+def calculate_statistics(df):
+    """Calcula todas las estadísticas requeridas"""
+    stats = {}
+    
+    # Calcular medias
+    stats['promedios'] = {
+        'temp_externa': df['Temperatura Externa'].mean(),
+        'temp_interna': df['Temperatura Interna'].mean(),
+        'humedad': df['Humedad Relativa'].mean(),
+        'nivel_agua': df['Nivel de Agua en el Tanque'].mean()
+    }
+    
+    # Calcular modas
+    stats['modas'] = {
+        'temp_externa': mode(df['Temperatura Externa']),
+        'temp_interna': mode(df['Temperatura Interna']),
+        'humedad': mode(df['Humedad Relativa']),
+        'nivel_agua': mode(df['Nivel de Agua en el Tanque'])
+    }
+    
+    # Calcular mínimos y máximos
+    stats['min_max'] = {
+        'temp_externa': (df['Temperatura Externa'].min(), df['Temperatura Externa'].max()),
+        'temp_interna': (df['Temperatura Interna'].min(), df['Temperatura Interna'].max()),
+        'humedad': (df['Humedad Relativa'].min(), df['Humedad Relativa'].max()),
+        'nivel_agua': (df['Nivel de Agua en el Tanque'].min(), df['Nivel de Agua en el Tanque'].max())
+    }
+    
+    # Calcular rangos de temperatura
+    stats['rangos'] = {
+        'diferencia_minimas': df['Temperatura Interna'].min() - df['Temperatura Externa'].min(),
+        'diferencia_maximas': df['Temperatura Interna'].max() - df['Temperatura Externa'].max()
+    }
+    
+    return stats
+
+# función para parsear el archivo TXT
+def parse_txt(file_path):
+    """Parses the TXT file and returns the statistics"""
+    stats = {}
+    with open(file_path, 'r') as file:
+        for line in file:
+            key, value = line.strip().split(':')
+            stats[key] = float(value)
+    return stats
+
+# Endpoint para cargar un archivo TXT
+@app.route('/api/analyze-txt', methods=['POST'])
+def analyze_txt():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+        if file:
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            
+            # Cargar y analizar el archivo TXT
+            stats = parse_txt(file_path)
+            
+            return jsonify(stats), 200
+    except Exception as e:
+        logging.error(f"Error analyzing TXT: {e}")
+        return jsonify({'error': 'Error analyzing TXT'}), 500
+
+# Endpoint para cargar un archivo CSV
+@app.route('/api/analyze-csv', methods=['POST'])
+def analyze_csv():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+        if file:
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            
+            # Cargar y analizar el archivo CSV
+            df = load_data(file_path)
+            stats = calculate_statistics(df)
+            
+            return jsonify(stats), 200
+    except Exception as e:
+        logging.error(f"Error analyzing CSV: {e}")
+        return jsonify({'error': 'Error analyzing CSV'}), 500
 
 @app.route('/api/data', methods=['GET'])
 def get_data():

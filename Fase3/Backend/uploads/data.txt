@@ -1,0 +1,5 @@
+promedio:23
+valorminimo:23.99
+valormaximo:23.02
+rangotempinterna:-3.19
+rangotempexterna:-3.21
