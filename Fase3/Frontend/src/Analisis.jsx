@@ -63,6 +63,13 @@ export function Analisis() {
             }
           }));
           break;
+        case 'analyze-maxmin':
+          setTxtStats(prevState => ({
+            ...prevState,
+            maximos: response.data.maximos,
+            minimos: response.data.minimos
+          }));
+          break;
         default:
           break;
       }
@@ -125,6 +132,10 @@ export function Analisis() {
           <label className="upload-button-txt">
             Temperatura Mínima (tmin.txt)
             <input className="file-input-hidden" type="file" accept=".txt" onChange={(e) => handleTxtFileUpload(e, 'analyze-tmin')} />
+          </label>
+          <label className="upload-button-txt">
+            Máximos y Mínimos (maxmin.txt)
+            <input className="file-input-hidden" type="file" accept=".txt" onChange={(e) => handleTxtFileUpload(e, 'analyze-maxmin')} />
           </label>
         </div>
 

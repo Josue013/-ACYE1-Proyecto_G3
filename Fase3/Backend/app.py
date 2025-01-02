@@ -79,6 +79,7 @@ def calculate_statistics(df):
     
     return stats
 
+# parsear el archivo average.txt
 def parse_average_txt(file_path):
     """Parses the average TXT file and returns the statistics"""
     stats = {}
@@ -102,6 +103,7 @@ def parse_average_txt(file_path):
                     continue  # Ignorar líneas que no pueden convertirse a float
     return stats
 
+# parsear el archivo moda.txt
 def parse_moda_txt(file_path):
     """Parses the moda TXT file and returns the statistics"""
     stats = {}
@@ -125,6 +127,7 @@ def parse_moda_txt(file_path):
                     continue
     return stats
 
+# parsear el archivo tmax.txt y tmin.txt
 def parse_single_value_txt(file_path):
     """Parses the single value TXT file and returns the value"""
     try:
@@ -134,6 +137,19 @@ def parse_single_value_txt(file_path):
     except ValueError:
         return None
 
+# parsear el archivo maxmin.txt
+def parse_maxmin_txt(file_path):
+    """Parses the maxmin TXT file and returns the statistics"""
+    stats = {'maximos': {}, 'minimos': {}}
+    keys = ['temp_externa', 'temp_interna', 'humedad', 'nivel_agua']
+    with open(file_path, 'r') as file:
+        for i, line in enumerate(file):
+            max_val, min_val = line.strip().split(',')
+            stats['maximos'][keys[i]] = float(max_val)
+            stats['minimos'][keys[i]] = float(min_val)
+    return stats
+
+# Endpoints para analizar los archivos TXT
 @app.route('/api/analyze-average', methods=['POST'])
 def analyze_average():
     try:
@@ -233,6 +249,32 @@ def analyze_tmin():
     except Exception as e:
         logging.error(f"Error analyzing tmin TXT: {e}")
         return jsonify({'error': 'Error analyzing tmin TXT'}), 500
+
+@app.route('/api/analyze-maxmin', methods=['POST'])
+def analyze_maxmin():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+        
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        
+        stats = parse_maxmin_txt(file_path)
+        if not stats:
+            return jsonify({'error': 'Error parsing maxmin file'}), 400
+            
+        # Limpiar el archivo después de procesarlo
+        os.remove(file_path)
+        
+        return jsonify(stats), 200
+    except Exception as e:
+        logging.error(f"Error analyzing maxmin TXT: {e}")
+        return jsonify({'error': 'Error analyzing maxmin TXT'}), 500
+
 
 @app.route('/api/analyze-csv', methods=['POST'])
 def analyze_csv():
