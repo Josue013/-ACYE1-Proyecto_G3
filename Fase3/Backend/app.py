@@ -57,11 +57,18 @@ def calculate_statistics(df):
     }
     
     # Calcular mínimos y máximos
-    stats['min_max'] = {
-        'temp_externa': (df['Temperatura Externa'].min(), df['Temperatura Externa'].max()),
-        'temp_interna': (df['Temperatura Interna'].min(), df['Temperatura Interna'].max()),
-        'humedad': (df['Humedad Relativa'].min(), df['Humedad Relativa'].max()),
-        'nivel_agua': (df['Nivel de Agua en el Tanque'].min(), df['Nivel de Agua en el Tanque'].max())
+    stats['minimos'] = {
+        'temp_externa': df['Temperatura Externa'].min(),
+        'temp_interna': df['Temperatura Interna'].min(),
+        'humedad': df['Humedad Relativa'].min(),
+        'nivel_agua': df['Nivel de Agua en el Tanque'].min()
+    }
+    
+    stats['maximos'] = {
+        'temp_externa': df['Temperatura Externa'].max(),
+        'temp_interna': df['Temperatura Interna'].max(),
+        'humedad': df['Humedad Relativa'].max(),
+        'nivel_agua': df['Nivel de Agua en el Tanque'].max()
     }
     
     # Calcular rangos de temperatura
@@ -72,19 +79,54 @@ def calculate_statistics(df):
     
     return stats
 
-# función para parsear el archivo TXT
-def parse_txt(file_path):
-    """Parses the TXT file and returns the statistics"""
+def parse_average_txt(file_path):
+    """Parses the average TXT file and returns the statistics"""
     stats = {}
     with open(file_path, 'r') as file:
-        for line in file:
+        lines = file.readlines()[1:]  # Skip the first line
+        for line in lines:
             key, value = line.strip().split(':')
+            value = value.replace(' ', '')
+            key = key.strip().lower().replace(' ', '_')
+            if key == 'temperatura_externa':
+                key = 'temp_externa'
+            elif key == 'temperatura_interna':
+                key = 'temp_interna'
+            elif key == 'humedad_relativa':
+                key = 'humedad'
+            elif key == 'nivel_de_agua':
+                key = 'nivel_agua'
             stats[key] = float(value)
     return stats
 
-# Endpoint para cargar un archivo TXT
-@app.route('/api/analyze-txt', methods=['POST'])
-def analyze_txt():
+def parse_moda_txt(file_path):
+    """Parses the moda TXT file and returns the statistics"""
+    stats = {}
+    with open(file_path, 'r') as file:
+        lines = file.readlines()[1:]  # Skip the first line
+        for line in lines:
+            key, value = line.strip().split(':')
+            value = value.replace(' ', '')
+            key = key.strip().lower().replace(' ', '_')
+            if key == 'temperatura_externa':
+                key = 'temp_externa'
+            elif key == 'temperatura_interna':
+                key = 'temp_interna'
+            elif key == 'humedad_relativa':
+                key = 'humedad'
+            elif key == 'nivel_de_agua':
+                key = 'nivel_agua'
+            stats[key] = float(value)
+    return stats
+
+def parse_single_value_txt(file_path):
+    """Parses the single value TXT file and returns the value"""
+    with open(file_path, 'r') as file:
+        value = float(file.readline().strip())
+    return value
+
+@app.route('/api/analyze-average', methods=['POST'])
+def analyze_average():
     try:
         if 'file' not in request.files:
             return jsonify({'error': 'No file part'}), 400
@@ -96,15 +138,78 @@ def analyze_txt():
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
             
-            # Cargar y analizar el archivo TXT
-            stats = parse_txt(file_path)
+            # Cargar y analizar el archivo average.txt
+            stats = parse_average_txt(file_path)
             
-            return jsonify(stats), 200
+            return jsonify({'promedios': stats}), 200
     except Exception as e:
-        logging.error(f"Error analyzing TXT: {e}")
-        return jsonify({'error': 'Error analyzing TXT'}), 500
+        logging.error(f"Error analyzing average TXT: {e}")
+        return jsonify({'error': 'Error analyzing average TXT'}), 500
 
-# Endpoint para cargar un archivo CSV
+@app.route('/api/analyze-moda', methods=['POST'])
+def analyze_moda():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+        if file:
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            
+            # Cargar y analizar el archivo moda.txt
+            stats = parse_moda_txt(file_path)
+            
+            return jsonify({'moda': stats}), 200
+    except Exception as e:
+        logging.error(f"Error analyzing moda TXT: {e}")
+        return jsonify({'error': 'Error analyzing moda TXT'}), 500
+
+@app.route('/api/analyze-tmax', methods=['POST'])
+def analyze_tmax():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+        if file:
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            
+            # Cargar y analizar el archivo tmax.txt
+            value = parse_single_value_txt(file_path)
+            
+            return jsonify({'tmax': value}), 200
+    except Exception as e:
+        logging.error(f"Error analyzing tmax TXT: {e}")
+        return jsonify({'error': 'Error analyzing tmax TXT'}), 500
+
+@app.route('/api/analyze-tmin', methods=['POST'])
+def analyze_tmin():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+        if file:
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            
+            # Cargar y analizar el archivo tmin.txt
+            value = parse_single_value_txt(file_path)
+            
+            return jsonify({'tmin': value}), 200
+    except Exception as e:
+        logging.error(f"Error analyzing tmin TXT: {e}")
+        return jsonify({'error': 'Error analyzing tmin TXT'}), 500
+
+
 @app.route('/api/analyze-csv', methods=['POST'])
 def analyze_csv():
     try:

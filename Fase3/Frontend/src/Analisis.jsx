@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import './Analisis.css'; // Asegúrate de que el archivo de estilos esté enlazado correctamente.
+import './Analisis.css';
 
 export function Analisis() {
   const [stats, setStats] = useState(null);
-  const [txtStats, setTxtStats] = useState(null);
+  const [txtStats, setTxtStats] = useState({}); 
   const [error, setError] = useState(null);
 
-  // Funcion que se encarga de subir un archivo CSV para analizarlo
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     const formData = new FormData();
@@ -27,25 +26,45 @@ export function Analisis() {
     }
   };
 
-  // Funcion que se encarga de subir un archivo TXT para analizarlo
-  const handleTxtFileUpload = async (event) => {
+  const handleTxtFileUpload = async (event, endpoint) => {
     const file = event.target.files[0];
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-      const response = await axios.post('http://localhost:5000/api/analyze-txt', formData, {
+      const response = await axios.post(`http://localhost:5000/api/${endpoint}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-      setTxtStats(response.data);
+      setTxtStats(prevState => ({ ...prevState, [endpoint]: response.data }));
       setError(null);
     } catch (error) {
-      setError('Error al analizar el archivo TXT');
-      setTxtStats(null);
+      setError(`Error al analizar el archivo ${endpoint}`);
+      setTxtStats(prevState => ({ ...prevState, [endpoint]: null }));
     }
   };
+
+  const renderTable = (title, dataKey, singleRow = false) => (
+    <table className="data-table">
+      <thead>
+        <tr>
+          <th>{title}</th>
+          <th>Python</th>
+          <th>Assembler</th>
+        </tr>
+      </thead>
+      <tbody>
+        {(singleRow ? ['diferencia_minimas', 'diferencia_maximas'] : ['temp_externa', 'temp_interna', 'humedad', 'nivel_agua']).map((rowKey) => (
+          <tr key={rowKey}>
+            <td>{rowKey.replace(/_/g, ' ')}</td>
+            <td>{stats?.[dataKey]?.[rowKey]?.toFixed(2) || ''}</td>
+            <td>{txtStats?.[dataKey]?.[rowKey]?.toFixed(2) || ''}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 
   return (
     <>
@@ -60,62 +79,36 @@ export function Analisis() {
             <input className="file-input-hidden" type="file" accept=".csv" onChange={handleFileUpload} />
           </label>
           <label className="upload-button-txt">
-            Archivo TXT
-            <input className="file-input-hidden" type="file" accept=".txt" onChange={handleTxtFileUpload} />
+            Promedios (average.txt)
+            <input className="file-input-hidden" type="file" accept=".txt" onChange={(e) => handleTxtFileUpload(e, 'analyze-average')} />
+          </label>
+          <label className="upload-button-txt">
+            Moda (moda.txt)
+            <input className="file-input-hidden" type="file" accept=".txt" onChange={(e) => handleTxtFileUpload(e, 'analyze-moda')} />
+          </label>
+          <label className="upload-button-txt">
+            Temperatura Máxima (tmax.txt)
+            <input className="file-input-hidden" type="file" accept=".txt" onChange={(e) => handleTxtFileUpload(e, 'analyze-tmax')} />
+          </label>
+          <label className="upload-button-txt">
+            Temperatura Mínima (tmin.txt)
+            <input className="file-input-hidden" type="file" accept=".txt" onChange={(e) => handleTxtFileUpload(e, 'analyze-tmin')} />
           </label>
         </div>
 
         {error && <p className="error">{error}</p>}
 
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Cálculo</th>
-              <th>Python</th>
-              <th>Assembler</th>
-            </tr>
-          </thead>
-          <tbody>
-            {stats || txtStats ? (
-              <>
-                <tr>
-                  <td>Promedio</td>
-                  <td>{stats ? stats.promedios.temp_externa.toFixed(2) : ''}</td>
-                  <td>{txtStats ? txtStats.promedio.toFixed(2) : ''}</td>
-                </tr>
-                <tr>
-                  <td>Moda</td>
-                  <td>{stats ? stats.modas.temp_externa : ''}</td>
-                  <td></td>
-                </tr>
-                <tr>
-                  <td>Valor mínimo</td>
-                  <td>{stats ? stats.min_max.temp_externa[0] : ''}</td>
-                  <td>{txtStats ? txtStats.valorminimo : ''}</td>
-                </tr>
-                <tr>
-                  <td>Valor máximo</td>
-                  <td>{stats ? stats.min_max.temp_externa[1] : ''}</td>
-                  <td>{txtStats ? txtStats.valormaximo : ''}</td>
-                </tr>
-                <tr>
-                  <td>Rango de temperatura interna</td>
-                  <td>{stats ? stats.rangos.diferencia_minimas : ''}</td>
-                  <td>{txtStats ? txtStats.rangotempinterna : ''}</td>
-                </tr>
-                <tr>
-                  <td>Rango de temperatura externa</td>
-                  <td>{stats ? stats.rangos.diferencia_maximas : ''}</td>
-                  <td>{txtStats ? txtStats.rangotempexterna : ''}</td>
-                </tr>
-              </>
-            ) : (
-              <tr>
-                <td colSpan="3">No se han cargado datos</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        {stats || Object.keys(txtStats).length > 0 ? (
+          <div>
+            {renderTable('Promedio', 'promedios')}
+            {renderTable('Moda', 'modas')}
+            {renderTable('Rango de Temperatura', 'rangos', true)}
+            {renderTable('Valor Máximo', 'maximos')}
+            {renderTable('Valor Mínimo', 'minimos')}
+          </div>
+        ) : (
+          <p>No se han cargado datos</p>
+        )}
       </div>
     </>
   );
