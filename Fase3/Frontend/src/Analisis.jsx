@@ -4,7 +4,7 @@ import './Analisis.css';
 
 export function Analisis() {
   const [stats, setStats] = useState(null);
-  const [txtStats, setTxtStats] = useState({}); 
+  const [txtStats, setTxtStats] = useState({});
   const [error, setError] = useState(null);
 
   const handleFileUpload = async (event) => {
@@ -37,7 +37,35 @@ export function Analisis() {
           'Content-Type': 'multipart/form-data',
         },
       });
-      setTxtStats(prevState => ({ ...prevState, [endpoint]: response.data }));
+      
+      switch (endpoint) {
+        case 'analyze-average':
+          setTxtStats(prevState => ({ ...prevState, promedios: response.data.promedios }));
+          break;
+        case 'analyze-moda':
+          setTxtStats(prevState => ({ ...prevState, modas: response.data.modas }));
+          break;
+        case 'analyze-tmax':
+          setTxtStats(prevState => ({ 
+            ...prevState, 
+            rangos: {
+              ...prevState.rangos,
+              diferencia_maximas: response.data.tmax
+            }
+          }));
+          break;
+        case 'analyze-tmin':
+          setTxtStats(prevState => ({ 
+            ...prevState, 
+            rangos: {
+              ...prevState.rangos,
+              diferencia_minimas: response.data.tmin
+            }
+          }));
+          break;
+        default:
+          break;
+      }
       setError(null);
     } catch (error) {
       setError(`Error al analizar el archivo ${endpoint}`);
@@ -45,31 +73,35 @@ export function Analisis() {
     }
   };
 
-  const renderTable = (title, dataKey, singleRow = false) => (
-    <table className="data-table">
-      <thead>
-        <tr>
-          <th>{title}</th>
-          <th>Python</th>
-          <th>Assembler</th>
-        </tr>
-      </thead>
-      <tbody>
-        {(singleRow ? ['diferencia_minimas', 'diferencia_maximas'] : ['temp_externa', 'temp_interna', 'humedad', 'nivel_agua']).map((rowKey) => (
-          <tr key={rowKey}>
-            <td>{rowKey.replace(/_/g, ' ')}</td>
-            <td>{stats?.[dataKey]?.[rowKey]?.toFixed(2) || ''}</td>
-            <td>{txtStats?.[dataKey]?.[rowKey]?.toFixed(2) || ''}</td>
+  const renderTable = (title, dataKey, singleRow = false) => {
+    const rows = singleRow ? ['diferencia_minimas', 'diferencia_maximas'] : ['temp_externa', 'temp_interna', 'humedad', 'nivel_agua'];
+    
+    return (
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th>{title}</th>
+            <th>Python</th>
+            <th>Assembler</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
-  );
+        </thead>
+        <tbody>
+          {rows.map((rowKey) => (
+            <tr key={rowKey}>
+              <td>{rowKey.replace(/_/g, ' ')}</td>
+              <td>{stats?.[dataKey]?.[rowKey]?.toFixed(2) || ''}</td>
+              <td>{txtStats?.[dataKey]?.[rowKey]?.toFixed(2) || ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  };
 
   return (
     <>
       <div className="title">
-        <h1>Pagina estadística</h1>
+        <h1>Página estadística</h1>
       </div>
 
       <div className="content">
@@ -98,7 +130,7 @@ export function Analisis() {
 
         {error && <p className="error">{error}</p>}
 
-        {stats || Object.keys(txtStats).length > 0 ? (
+        {(stats || Object.keys(txtStats).length > 0) && (
           <div>
             {renderTable('Promedio', 'promedios')}
             {renderTable('Moda', 'modas')}
@@ -106,8 +138,6 @@ export function Analisis() {
             {renderTable('Valor Máximo', 'maximos')}
             {renderTable('Valor Mínimo', 'minimos')}
           </div>
-        ) : (
-          <p>No se han cargado datos</p>
         )}
       </div>
     </>
