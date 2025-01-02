@@ -83,47 +83,56 @@ def parse_average_txt(file_path):
     """Parses the average TXT file and returns the statistics"""
     stats = {}
     with open(file_path, 'r') as file:
-        lines = file.readlines()[1:]  # Skip the first line
-        for line in lines:
-            key, value = line.strip().split(':')
-            value = value.replace(' ', '')
-            key = key.strip().lower().replace(' ', '_')
-            if key == 'temperatura_externa':
-                key = 'temp_externa'
-            elif key == 'temperatura_interna':
-                key = 'temp_interna'
-            elif key == 'humedad_relativa':
-                key = 'humedad'
-            elif key == 'nivel_de_agua':
-                key = 'nivel_agua'
-            stats[key] = float(value)
+        for line in file:
+            if ':' in line:  # Asegurarse de que la línea contiene ':'
+                key, value = line.strip().split(':')
+                value = value.strip()  # Eliminar espacios en blanco
+                try:
+                    key = key.strip().lower().replace(' ', '_')
+                    if key == 'temperatura_externa':
+                        key = 'temp_externa'
+                    elif key == 'temperatura_interna':
+                        key = 'temp_interna'
+                    elif key == 'humedad_relativa':
+                        key = 'humedad'
+                    elif key == 'nivel_de_agua':
+                        key = 'nivel_agua'
+                    stats[key] = float(value)
+                except ValueError:
+                    continue  # Ignorar líneas que no pueden convertirse a float
     return stats
 
 def parse_moda_txt(file_path):
     """Parses the moda TXT file and returns the statistics"""
     stats = {}
     with open(file_path, 'r') as file:
-        lines = file.readlines()[1:]  # Skip the first line
-        for line in lines:
-            key, value = line.strip().split(':')
-            value = value.replace(' ', '')
-            key = key.strip().lower().replace(' ', '_')
-            if key == 'temperatura_externa':
-                key = 'temp_externa'
-            elif key == 'temperatura_interna':
-                key = 'temp_interna'
-            elif key == 'humedad_relativa':
-                key = 'humedad'
-            elif key == 'nivel_de_agua':
-                key = 'nivel_agua'
-            stats[key] = float(value)
+        for line in file:
+            if ':' in line:
+                key, value = line.strip().split(':')
+                value = value.strip()
+                try:
+                    key = key.strip().lower().replace(' ', '_')
+                    if key == 'temperatura_externa':
+                        key = 'temp_externa'
+                    elif key == 'temperatura_interna':
+                        key = 'temp_interna'
+                    elif key == 'humedad_relativa':
+                        key = 'humedad'
+                    elif key == 'nivel_de_agua':
+                        key = 'nivel_agua'
+                    stats[key] = float(value)
+                except ValueError:
+                    continue
     return stats
 
 def parse_single_value_txt(file_path):
     """Parses the single value TXT file and returns the value"""
-    with open(file_path, 'r') as file:
-        value = float(file.readline().strip())
-    return value
+    try:
+        with open(file_path, 'r') as file:
+            value = float(file.readline().strip())
+            return value
+    except ValueError:
+        return None
 
 @app.route('/api/analyze-average', methods=['POST'])
 def analyze_average():
@@ -133,15 +142,19 @@ def analyze_average():
         file = request.files['file']
         if file.filename == '':
             return jsonify({'error': 'No selected file'}), 400
-        if file:
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
+        
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        
+        stats = parse_average_txt(file_path)
+        if not stats:
+            return jsonify({'error': 'Error parsing average file'}), 400
             
-            # Cargar y analizar el archivo average.txt
-            stats = parse_average_txt(file_path)
-            
-            return jsonify({'promedios': stats}), 200
+        # Limpiar el archivo después de procesarlo
+        os.remove(file_path)
+        
+        return jsonify({'promedios': stats}), 200
     except Exception as e:
         logging.error(f"Error analyzing average TXT: {e}")
         return jsonify({'error': 'Error analyzing average TXT'}), 500
@@ -154,15 +167,19 @@ def analyze_moda():
         file = request.files['file']
         if file.filename == '':
             return jsonify({'error': 'No selected file'}), 400
-        if file:
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
+        
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        
+        stats = parse_moda_txt(file_path)
+        if not stats:
+            return jsonify({'error': 'Error parsing moda file'}), 400
             
-            # Cargar y analizar el archivo moda.txt
-            stats = parse_moda_txt(file_path)
-            
-            return jsonify({'moda': stats}), 200
+        # Limpiar el archivo después de procesarlo
+        os.remove(file_path)
+        
+        return jsonify({'modas': stats}), 200
     except Exception as e:
         logging.error(f"Error analyzing moda TXT: {e}")
         return jsonify({'error': 'Error analyzing moda TXT'}), 500
@@ -175,15 +192,19 @@ def analyze_tmax():
         file = request.files['file']
         if file.filename == '':
             return jsonify({'error': 'No selected file'}), 400
-        if file:
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
+        
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        
+        value = parse_single_value_txt(file_path)
+        if value is None:
+            return jsonify({'error': 'Error parsing tmax file'}), 400
             
-            # Cargar y analizar el archivo tmax.txt
-            value = parse_single_value_txt(file_path)
-            
-            return jsonify({'tmax': value}), 200
+        # Limpiar el archivo después de procesarlo
+        os.remove(file_path)
+        
+        return jsonify({'tmax': value}), 200
     except Exception as e:
         logging.error(f"Error analyzing tmax TXT: {e}")
         return jsonify({'error': 'Error analyzing tmax TXT'}), 500
@@ -196,19 +217,22 @@ def analyze_tmin():
         file = request.files['file']
         if file.filename == '':
             return jsonify({'error': 'No selected file'}), 400
-        if file:
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
+        
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        
+        value = parse_single_value_txt(file_path)
+        if value is None:
+            return jsonify({'error': 'Error parsing tmin file'}), 400
             
-            # Cargar y analizar el archivo tmin.txt
-            value = parse_single_value_txt(file_path)
-            
-            return jsonify({'tmin': value}), 200
+        # Limpiar el archivo después de procesarlo
+        os.remove(file_path)
+        
+        return jsonify({'tmin': value}), 200
     except Exception as e:
         logging.error(f"Error analyzing tmin TXT: {e}")
         return jsonify({'error': 'Error analyzing tmin TXT'}), 500
-
 
 @app.route('/api/analyze-csv', methods=['POST'])
 def analyze_csv():

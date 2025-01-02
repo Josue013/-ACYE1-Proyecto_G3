@@ -1,5 +1,0 @@
-Moda de los datos:
-Temperatura Externa: 23.00
-Temperatura Interna: 19.80
-Humedad Relativa: 54.00
-Nivel de Agua: 37.13
